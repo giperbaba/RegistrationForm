@@ -1,7 +1,8 @@
-import axios from "axios";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { User } from './User';
+import { User } from '../types/User';
+import { postUser } from "./shared/api/requests/profile/sign-in/post";
+import { postPhone } from "./shared/api/requests/otps/post";
 
 const App = () => {
     const { register, handleSubmit, formState: { errors }, trigger } = useForm();
@@ -26,7 +27,7 @@ const App = () => {
     }
 
     useEffect(() => {
-        let timer;
+        let timer: number | 0;
         if (isTimerStart && count > 0) {
             timer = setInterval(() => {
                 setCount(prevCount => prevCount - 1);
@@ -59,14 +60,11 @@ const App = () => {
         }
 
         if (!isCodeSent) {
-            try {
-                const postPhone = await axios.post('https://shift-backend.onrender.com/auth/otp', {
-                    phone: data.phone.replace(/ /g, ''),
-                });
+            try {         
+                const responsePhone = await postPhone(data.phone)
                 setIsPhoneApproved(true)
                 setIsCodeSent(true);
                 setIsTimerStart(true);
-                console.log(postPhone.data);
             }
             catch (e) {
                 setIsCodeSent(false);
@@ -75,13 +73,10 @@ const App = () => {
         }
         else {
             try {
-                const postUser = await axios.post('https://shift-backend.onrender.com/users/signin', {
-                    phone: data.phone.replace(/ /g, ''),
-                    code: Number(data.code)
-                });
+                const responseSignIn = await postUser(data.phone, data.code)
                 setIsVisibleRequestAgain(false);
 
-                const responseData = postUser.data;
+                const responseData = responseSignIn.data;
 
                 const user: User = responseData.user;
                 console.log(user);
@@ -108,8 +103,10 @@ const App = () => {
                 {...register('phone', {
                     required: 'Поле является обязательным',
                     pattern: {
-                        value: /((7|8|(\+7))([0-9]){10})/,
+                        value: /^((7|8|(\+7))\d{10})$/,
+                        message: 'Поле является обязательным'
                     }
+            
                 })}
                 className="input"
                 placeholder="Телефон"
